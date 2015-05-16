@@ -20,6 +20,7 @@ import javax.inject.Inject;
 
 import butterknife.InjectView;
 import rx.android.app.AppObservable;
+import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 import timber.log.Timber;
 
@@ -53,7 +54,12 @@ public class CitiesFallbackActivity extends NavigationDrawerActivity implements 
         super.onStart();
         mSubscription = AppObservable.bindActivity(this, mBaggersService.getBaggersCities())
                 .subscribeOn(Schedulers.io())
-                .subscribe(this::onCitiesLoaded);
+                .subscribe(new Action1<List<City>>() {
+                    @Override
+                    public void call(List<City> cities) {
+                        onCitiesLoaded(cities);
+                    }
+                });
     }
 
     @Override

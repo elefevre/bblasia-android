@@ -1,5 +1,7 @@
 package com.nilhcem.bblfr.core.dagger;
 
+import android.net.Uri;
+
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nilhcem.bblfr.BBLApplication;
@@ -57,7 +59,12 @@ public class BBLModule {
     @Provides @Singleton Picasso providePicasso(OkHttpClient client) {
         Picasso.Builder builder = new Picasso.Builder(mApp).downloader(new OkHttpDownloader(client));
         if (BuildConfig.DEBUG) {
-            builder.listener((picasso, uri, e) -> Timber.e(e, "Failed to load image: %s", uri));
+            builder.listener(new Picasso.Listener() {
+                @Override
+                public void onImageLoadFailed(Picasso picasso, Uri uri, Exception exception) {
+                    Timber.e(exception, "Failed to load image: %s", uri);
+                }
+            });
         }
         return builder.build();
     }

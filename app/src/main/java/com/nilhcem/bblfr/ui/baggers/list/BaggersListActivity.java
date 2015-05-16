@@ -21,6 +21,7 @@ import java.util.List;
 import butterknife.InjectView;
 import icepick.Icicle;
 import rx.android.app.AppObservable;
+import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 import timber.log.Timber;
 
@@ -59,10 +60,13 @@ public class BaggersListActivity extends TagsListActivity {
 
         mSubscription = AppObservable.bindActivity(this, mBaggersService.getBaggers(this, mCity.id, selectedTags))
                 .subscribeOn(Schedulers.io())
-                .subscribe(baggersListEntries -> {
-                    Timber.d("Baggers loaded from DB");
-                    mBaggers = new ArrayList<>(baggersListEntries);
-                    updateAdapter(baggersListEntries);
+                .subscribe(new Action1<List<BaggersListEntry>>() {
+                    @Override
+                    public void call(List<BaggersListEntry> baggersListEntries) {
+                        Timber.d("Baggers loaded from DB");
+                        mBaggers = new ArrayList<>(baggersListEntries);
+                        updateAdapter(baggersListEntries);
+                    }
                 });
     }
 

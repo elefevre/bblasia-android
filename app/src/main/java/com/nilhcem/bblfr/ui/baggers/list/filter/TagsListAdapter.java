@@ -52,7 +52,7 @@ public class TagsListAdapter extends BaseHeaderAdapter<Void, TagsListEntry, Tags
     public void updateItems(List<TagsListEntry> items, boolean notifyOnFilterChange) {
         super.updateItems(items, null, true);
         if (notifyOnFilterChange) {
-            mListener.onFilterChanged(Collections.emptyList());
+            mListener.onFilterChanged(Collections.<String>emptyList());
         }
     }
 

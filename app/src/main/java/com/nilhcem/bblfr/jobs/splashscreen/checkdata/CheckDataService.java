@@ -16,6 +16,8 @@ import java.util.List;
 import javax.inject.Inject;
 
 import rx.Observable;
+import rx.Subscriber;
+import rx.functions.Func2;
 import timber.log.Timber;
 
 public class CheckDataService {
@@ -39,36 +41,47 @@ public class CheckDataService {
         return Observable.zip(
                 checkDatabase(),
                 getFavoriteCity(context),
-                Pair::create);
+                new Func2<Boolean, City, Pair<Boolean, City>>() {
+                    @Override
+                    public Pair<Boolean, City> call(Boolean checkDb, City city) {
+                        return Pair.create(checkDb, city);
+                    }
+                });
     }
 
     private Observable<Boolean> checkDatabase() {
-        return Observable.create(subscriber -> {
-            subscriber.onNext(mCitiesDao.hasData() && mBaggersDao.hasData() && mLocationsDao.hasData());
-            subscriber.onCompleted();
+        return Observable.create(new Observable.OnSubscribe<Boolean>() {
+            @Override
+            public void call(Subscriber<? super Boolean> subscriber) {
+                subscriber.onNext(mCitiesDao.hasData() && mBaggersDao.hasData() && mLocationsDao.hasData());
+                subscriber.onCompleted();
+            }
         });
     }
 
-    private Observable<City> getFavoriteCity(Context context) {
-        return Observable.create(subscriber -> {
-            mProvider.initSync(context);
-            City city = null;
+    private Observable<City> getFavoriteCity(final Context context) {
+        return Observable.create(new Observable.OnSubscribe<City>() {
+            @Override
+            public void call(Subscriber<? super City> subscriber) {
+                mProvider.initSync(context);
+                City city = null;
 
-            Pair<String, String> latLng = mPrefs.getFavoriteCityLatLng();
-            if (latLng != null) {
-                Timber.d("Favorite city found");
-                city = mCitiesDao.getCityByLatLng(latLng.first, latLng.second);
-            }
-
-            if (city == null) {
-                Timber.d("Try to find the closest city");
-                city = findClosestCity(mProvider.getLastKnownLocation(), mCitiesDao.getCities());
-                if (city != null) {
-                    mPrefs.setFavoriteCity(city);
+                Pair<String, String> latLng = mPrefs.getFavoriteCityLatLng();
+                if (latLng != null) {
+                    Timber.d("Favorite city found");
+                    city = mCitiesDao.getCityByLatLng(latLng.first, latLng.second);
                 }
+
+                if (city == null) {
+                    Timber.d("Try to find the closest city");
+                    city = findClosestCity(mProvider.getLastKnownLocation(), mCitiesDao.getCities());
+                    if (city != null) {
+                        mPrefs.setFavoriteCity(city);
+                    }
+                }
+                subscriber.onNext(city);
+                subscriber.onCompleted();
             }
-            subscriber.onNext(city);
-            subscriber.onCompleted();
         });
     }
 

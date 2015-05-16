@@ -32,6 +32,8 @@ import javax.inject.Inject;
 
 import rx.Observable;
 import rx.android.app.AppObservable;
+import rx.functions.Action1;
+import rx.functions.Func2;
 import rx.schedulers.Schedulers;
 import timber.log.Timber;
 
@@ -62,12 +64,30 @@ public class CitiesMapActivity extends BaseMapActivity {
                 Observable.zip(
                         mBaggersService.getBaggersCities(),
                         MapUtils.getGoogleMapObservable(mMapFragment),
-                        Pair::create))
-                .subscribeOn(Schedulers.io())
-                .subscribe(pair -> pair.second.setOnMapLoadedCallback(() -> onCitiesLoaded(pair.first, pair.second)), error -> {
-                    Timber.e(error, "Error getting baggers cities");
-                    Toast.makeText(CitiesMapActivity.this, R.string.baggers_map_error, Toast.LENGTH_SHORT).show();
-                    finish();
+                        new Func2<List<City>, GoogleMap, Pair<List<City>, GoogleMap>>() {
+                            @Override
+                            public Pair<List<City>, GoogleMap> call(List<City> cities, GoogleMap googleMap) {
+                                return Pair.create(cities, googleMap);
+                            }
+                        })
+                        .subscribeOn(Schedulers.io()))
+                .subscribe(new Action1<Pair<List<City>, GoogleMap>>() {
+                    @Override
+                    public void call(final Pair<List<City>, GoogleMap> pair) {
+                        pair.second.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                            @Override
+                            public void onMapLoaded() {
+                                onCitiesLoaded(pair.first, pair.second);
+                            }
+                        });
+                    }
+                }, new Action1<Throwable>() {
+                    @Override
+                    public void call(Throwable throwable) {
+                        Timber.e(throwable, "Error getting baggers cities");
+                        Toast.makeText(CitiesMapActivity.this, R.string.baggers_map_error, Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
                 });
     }
 
@@ -77,7 +97,7 @@ public class CitiesMapActivity extends BaseMapActivity {
 
         // Set the locations in the map.
         List<Marker> markers = new ArrayList<>();
-        Map<Marker, City> markerCities = new HashMap<>();
+        final Map<Marker, City> markerCities = new HashMap<>();
         for (City city : cities) {
             Marker marker = map.addMarker(new MarkerOptions()
                             .position(new LatLng(city.lat, city.lng))
@@ -88,12 +108,15 @@ public class CitiesMapActivity extends BaseMapActivity {
             markerCities.put(marker, city);
         }
 
-        map.setOnMarkerClickListener(marker -> {
-            Timber.d("City selected");
-            City city = markerCities.get(marker);
-            mPrefs.setFavoriteCity(city);
-            startActivity(BaggersListActivity.createLaunchIntent(this, city));
-            return true;
+        map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                Timber.d("City selected");
+                City city = markerCities.get(marker);
+                mPrefs.setFavoriteCity(city);
+                startActivity(BaggersListActivity.createLaunchIntent(CitiesMapActivity.this, city));
+                return true;
+            }
         });
 
         // Zoom the map indicator to user's current position

@@ -37,10 +37,18 @@ public class ErrorDialogFragment extends DialogFragment {
         return new AlertDialog.Builder(getActivity())
                 .setTitle(mNetworkIssue ? R.string.splash_error_network_title : R.string.splash_error_unknown_title)
                 .setMessage(mNetworkIssue ? R.string.splash_error_network_content : R.string.splash_error_unknown_content)
-                .setPositiveButton(R.string.splash_error_button_exit, (dialog, which) -> exit(getActivity(), dialog))
-                .setNegativeButton(R.string.splash_error_button_prefs, (dialog, which) -> {
-                    startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));
-                    exit(getActivity(), dialog);
+                .setPositiveButton(R.string.splash_error_button_exit, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        exit(getActivity(), dialog);
+                    }
+                })
+                .setNegativeButton(R.string.splash_error_button_prefs, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));
+                        exit(getActivity(), dialog);
+                    }
                 })
                 .create();
     }

@@ -17,6 +17,7 @@ import java.util.List;
 import javax.inject.Inject;
 
 import rx.Observable;
+import rx.Subscriber;
 
 public class BaggersService {
 
@@ -29,36 +30,45 @@ public class BaggersService {
         mBaggersDao = baggersDao;
     }
 
-    public Observable<List<BaggersListEntry>> getBaggers(@NonNull Context context, @NonNull Long cityId, @NonNull List<String> selectedTags) {
-        return Observable.create(subscriber -> {
-            List<BaggersListEntry> entries = new ArrayList<>();
-            List<Bagger> baggers = mBaggersDao.getBaggers(cityId, selectedTags);
+    public Observable<List<BaggersListEntry>> getBaggers(@NonNull final Context context, @NonNull final Long cityId, @NonNull final List<String> selectedTags) {
+        return Observable.create(new Observable.OnSubscribe<List<BaggersListEntry>>() {
+            @Override
+            public void call(Subscriber<? super List<BaggersListEntry>> subscriber) {
+                List<BaggersListEntry> entries = new ArrayList<>();
+                List<Bagger> baggers = mBaggersDao.getBaggers(cityId, selectedTags);
 
-            for (Bagger bagger : baggers) {
-                entries.add(new BaggersListEntry(context, bagger));
+                for (Bagger bagger : baggers) {
+                    entries.add(new BaggersListEntry(context, bagger));
+                }
+                subscriber.onNext(entries);
+                subscriber.onCompleted();
             }
-            subscriber.onNext(entries);
-            subscriber.onCompleted();
         });
     }
 
-    public Observable<List<TagsListEntry>> getBaggersTags(@NonNull Long cityId) {
-        return Observable.create(subscriber -> {
-            List<TagsListEntry> entries = new ArrayList<>();
-            List<Tag> tags = mBaggersDao.getBaggersTags(cityId);
+    public Observable<List<TagsListEntry>> getBaggersTags(@NonNull final Long cityId) {
+        return Observable.create(new Observable.OnSubscribe<List<TagsListEntry>>() {
+            @Override
+            public void call(Subscriber<? super List<TagsListEntry>> subscriber) {
+                List<TagsListEntry> entries = new ArrayList<>();
+                List<Tag> tags = mBaggersDao.getBaggersTags(cityId);
 
-            for (Tag tag : tags) {
-                entries.add(new TagsListEntry(tag));
+                for (Tag tag : tags) {
+                    entries.add(new TagsListEntry(tag));
+                }
+                subscriber.onNext(entries);
+                subscriber.onCompleted();
             }
-            subscriber.onNext(entries);
-            subscriber.onCompleted();
         });
     }
 
     public Observable<List<City>> getBaggersCities() {
-        return Observable.create(subscriber -> {
-            subscriber.onNext(mCitiesDao.getCities());
-            subscriber.onCompleted();
+        return Observable.create(new Observable.OnSubscribe<List<City>>() {
+            @Override
+            public void call(Subscriber<? super List<City>> subscriber) {
+                subscriber.onNext(mCitiesDao.getCities());
+                subscriber.onCompleted();
+            }
         });
     }
 }

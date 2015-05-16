@@ -13,6 +13,7 @@ import com.google.android.gms.maps.model.Marker;
 import java.util.List;
 
 import rx.Observable;
+import rx.Subscriber;
 import timber.log.Timber;
 
 public class MapUtils {
@@ -23,10 +24,13 @@ public class MapUtils {
         throw new UnsupportedOperationException();
     }
 
-    public static Observable<GoogleMap> getGoogleMapObservable(MapFragment fragment) {
-        return Observable.create(subscriber -> {
-            subscriber.onNext(fragment.getMap());
-            subscriber.onCompleted();
+    public static Observable<GoogleMap> getGoogleMapObservable(final MapFragment fragment) {
+        return Observable.create(new Observable.OnSubscribe<GoogleMap>() {
+            @Override
+            public void call(Subscriber<? super GoogleMap> subscriber) {
+                subscriber.onNext(fragment.getMap());
+                subscriber.onCompleted();
+            }
         });
     }
 

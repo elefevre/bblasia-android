@@ -27,6 +27,8 @@ import javax.inject.Inject;
 
 import rx.Observable;
 import rx.android.app.AppObservable;
+import rx.functions.Action1;
+import rx.functions.Func2;
 import rx.schedulers.Schedulers;
 import timber.log.Timber;
 
@@ -54,9 +56,24 @@ public class LocationsMapActivity extends BaseMapActivity {
                 Observable.zip(
                         mLocationsService.getLocations(),
                         MapUtils.getGoogleMapObservable(mMapFragment),
-                        Pair::create))
+                        new Func2<List<Location>, GoogleMap, Pair<List<Location>, GoogleMap>>() {
+                            @Override
+                            public Pair<List<Location>, GoogleMap> call(List<Location> locations, GoogleMap googleMap) {
+                                return Pair.create(locations, googleMap);
+                            }
+                        }))
                 .subscribeOn(Schedulers.io())
-                .subscribe(pair -> pair.second.setOnMapLoadedCallback(() -> onHostsLoaded(pair.first, pair.second)));
+                .subscribe(new Action1<Pair<List<Location>, GoogleMap>>() {
+                    @Override
+                    public void call(final Pair<List<Location>, GoogleMap> pair) {
+                        pair.second.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                            @Override
+                            public void onMapLoaded() {
+                                onHostsLoaded(pair.first, pair.second);
+                            }
+                        });
+                    }
+                });
     }
 
     private void onHostsLoaded(List<Location> locations, GoogleMap map) {
@@ -65,7 +82,7 @@ public class LocationsMapActivity extends BaseMapActivity {
 
         // Set the locations in the map.
         List<Marker> markers = new ArrayList<>();
-        Map<Marker, Location> markerLocations = new HashMap<>();
+        final Map<Marker, Location> markerLocations = new HashMap<>();
         for (Location location : locations) {
             Marker marker = map.addMarker(new MarkerOptions()
                             .position(MapUtils.gpsToLatLng(location.gps))
@@ -79,10 +96,13 @@ public class LocationsMapActivity extends BaseMapActivity {
         map.setInfoWindowAdapter(new LocationsInfoWindowAdapter(this, markerLocations));
 
         // Open the company's website when clicking on the infowindow.
-        map.setOnInfoWindowClickListener(marker -> {
-            String website = markerLocations.get(marker).website;
-            if (!TextUtils.isEmpty(website)) {
-                IntentUtils.startSiteIntent(this, website);
+        map.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+            @Override
+            public void onInfoWindowClick(Marker marker) {
+                String website = markerLocations.get(marker).website;
+                if (!TextUtils.isEmpty(website)) {
+                    IntentUtils.startSiteIntent(LocationsMapActivity.this, website);
+                }
             }
         });
 

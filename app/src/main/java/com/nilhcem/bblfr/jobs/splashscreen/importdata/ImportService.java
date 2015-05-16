@@ -5,6 +5,7 @@ import android.util.Pair;
 import javax.inject.Inject;
 
 import rx.Observable;
+import rx.functions.Func2;
 
 public class ImportService {
 
@@ -21,6 +22,11 @@ public class ImportService {
         return Observable.zip(
                 mBaggersService.importData(),
                 mLocationsService.importData(),
-                Pair::create);
+                new Func2<Boolean, Boolean, Pair<Boolean, Boolean>>() {
+                    @Override
+                    public Pair<Boolean, Boolean> call(Boolean res1, Boolean res2) {
+                        return Pair.create(res1, res2);
+                    }
+                });
     }
 }

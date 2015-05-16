@@ -12,6 +12,8 @@ import com.squareup.okhttp.Response;
 import java.io.IOException;
 
 import rx.Observable;
+import rx.Subscriber;
+import rx.functions.Func1;
 import timber.log.Timber;
 
 public abstract class BaseImport<T> {
@@ -32,29 +34,44 @@ public abstract class BaseImport<T> {
     }
 
     public Observable<Boolean> importData() {
-        return getProperJson(getUrl()).map(this::convertToJsonData).map(this::saveToDatabase);
+        return getProperJson(getUrl())
+                .map(new Func1<String, T>() {
+                    @Override
+                    public T call(String json) {
+                        return convertToJsonData(json);
+                    }
+                })
+                .map(new Func1<T, Boolean>() {
+                    @Override
+                    public Boolean call(T data) {
+                        return saveToDatabase(data);
+                    }
+                });
     }
 
     protected abstract String getUrl();
 
-    private Observable<String> getProperJson(String url) {
-        return Observable.create(subscriber -> {
-            String json = null;
-            Request request = new Request.Builder()
-                    .url(url)
-                    .build();
+    private Observable<String> getProperJson(final String url) {
+        return Observable.create(new Observable.OnSubscribe<String>() {
+            @Override
+            public void call(Subscriber<? super String> subscriber) {
+                String json = null;
+                Request request = new Request.Builder()
+                        .url(url)
+                        .build();
 
-            Response response;
-            try {
-                response = mClient.newCall(request).execute();
-                // Response starts with "var data = {", which we should remove.
-                json = response.body().string().replaceFirst("[^{]*", "");
-            } catch (IOException e) {
-                Timber.e(e, "Error importing baggers");
+                Response response;
+                try {
+                    response = mClient.newCall(request).execute();
+                    // Response starts with "var data = {", which we should remove.
+                    json = response.body().string().replaceFirst("[^{]*", "");
+                } catch (IOException e) {
+                    Timber.e(e, "Error importing baggers");
+                }
+
+                subscriber.onNext(json);
+                subscriber.onCompleted();
             }
-
-            subscriber.onNext(json);
-            subscriber.onCompleted();
         });
     }
 

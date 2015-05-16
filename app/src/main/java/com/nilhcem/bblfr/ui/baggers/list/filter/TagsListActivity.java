@@ -37,6 +37,7 @@ import butterknife.InjectView;
 import icepick.Icicle;
 import rx.Subscription;
 import rx.android.app.AppObservable;
+import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 import timber.log.Timber;
 
@@ -86,10 +87,13 @@ public abstract class TagsListActivity extends NavigationDrawerActivity implemen
         if (mTags == null) {
             mTagsSubscription = AppObservable.bindActivity(this, mBaggersService.getBaggersTags(mCity.id))
                     .subscribeOn(Schedulers.io())
-                    .subscribe(tags -> {
-                        Timber.d("Tags loaded from database");
-                        mTags = new ArrayList<>(tags);
-                        mTagsAdapter.updateItems(mTags);
+                    .subscribe(new Action1<List<TagsListEntry>>() {
+                        @Override
+                        public void call(List<TagsListEntry> tagsListEntries) {
+                            Timber.d("Tags loaded from database");
+                            mTags = new ArrayList<>(tagsListEntries);
+                            mTagsAdapter.updateItems(mTags);
+                        }
                     });
         } else {
             mTagsAdapter.updateItems(mTags, false);

@@ -3,6 +3,7 @@ package com.nilhcem.bblfr.ui.splashscreen;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Html;
+import android.util.Pair;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -27,6 +28,7 @@ import butterknife.ButterKnife;
 import butterknife.InjectView;
 import butterknife.Optional;
 import rx.android.app.AppObservable;
+import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 import timber.log.Timber;
 
@@ -62,7 +64,17 @@ public class SplashscreenActivity extends BaseActivity {
         if (shouldImportData(mPrefs.getLastDownloadDate(), isNetworkAvailable(this))) {
             mSubscription = AppObservable.bindActivity(this, mImportService.importData())
                     .subscribeOn(Schedulers.io())
-                    .subscribe(r -> onAfterDataImported(true), throwable -> onImportError());
+                    .subscribe(new Action1<Pair<Boolean, Boolean>>() {
+                        @Override
+                        public void call(Pair<Boolean, Boolean> booleanBooleanPair) {
+                            onAfterDataImported(true);
+                        }
+                    }, new Action1<Throwable>() {
+                        @Override
+                        public void call(Throwable throwable) {
+                            onImportError();
+                        }
+                    });
         } else {
             onAfterDataImported(false);
         }
@@ -99,24 +111,32 @@ public class SplashscreenActivity extends BaseActivity {
     /**
      * Verifies data, then directs to the appropriate activity.
      */
-    private void onAfterDataImported(boolean saveDownloadDate) {
+    private void onAfterDataImported(final boolean saveDownloadDate) {
         unsubscribe(mSubscription);
         mSubscription = AppObservable.bindActivity(this, mCheckDataService.checkData(this))
                 .subscribeOn(Schedulers.io())
-                .subscribe(result -> {
-                    Boolean hasValidData = result.first;
-                    City city = result.second;
+                .subscribe(new Action1<Pair<Boolean, City>>() {
+                    @Override
+                    public void call(Pair<Boolean, City> result) {
+                        Boolean hasValidData = result.first;
+                        City city = result.second;
 
-                    if (hasValidData) {
-                        if (saveDownloadDate) {
-                            Timber.d("Keep data download date");
-                            mPrefs.setDownloadDate();
+                        if (hasValidData) {
+                            if (saveDownloadDate) {
+                                Timber.d("Keep data download date");
+                                mPrefs.setDownloadDate();
+                            }
+                            startNextActivity(city);
+                        } else {
+                            onImportError();
                         }
-                        startNextActivity(city);
-                    } else {
+                    }
+                }, new Action1<Throwable>() {
+                    @Override
+                    public void call(Throwable throwable) {
                         onImportError();
                     }
-                }, throwable -> onImportError());
+                });
     }
 
     private void startNextActivity(City city) {

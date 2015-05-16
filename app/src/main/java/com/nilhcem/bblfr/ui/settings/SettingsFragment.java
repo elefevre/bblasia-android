@@ -46,13 +46,16 @@ public class SettingsFragment extends PreferenceFragment {
         modePref.setTitle(getString(R.string.settings_data_hr_title));
         modePref.setSummary(getString(mPrefs.isUsingHrMode() ? R.string.settings_data_hr_leave_summary : R.string.settings_data_hr_enter_summary));
 
-        modePref.setOnPreferenceClickListener(preference -> {
-            Timber.d("Change mode");
-            mPrefs.toggleMode();
-            Activity context = getActivity();
-            context.finish();
-            IntentUtils.restartApp(context);
-            return true;
+        modePref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+                Timber.d("Change mode");
+                mPrefs.toggleMode();
+                Activity context = getActivity();
+                context.finish();
+                IntentUtils.restartApp(context);
+                return true;
+            }
         });
     }
 
@@ -63,9 +66,12 @@ public class SettingsFragment extends PreferenceFragment {
     private void initRateApp() {
         Preference ratePref = findPreference("prefs_rate_link");
         if (AppUtils.wasInstalledFromGooglePlay(getActivity())) {
-            ratePref.setOnPreferenceClickListener(preference -> {
-                IntentUtils.startGooglePlayIntent(getActivity());
-                return true;
+            ratePref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    IntentUtils.startGooglePlayIntent(getActivity());
+                    return true;
+                }
             });
         } else {
             ((PreferenceCategory) findPreference("prefs_about")).removePreference(ratePref);
@@ -73,9 +79,13 @@ public class SettingsFragment extends PreferenceFragment {
     }
 
     private void initPreferenceLink(String prefName) {
-        findPreference(prefName).setOnPreferenceClickListener(preference -> {
-            IntentUtils.startSiteIntent(getActivity(), preference.getSummary().toString());
-            return true;
-        });
+        findPreference(prefName).setOnPreferenceClickListener(
+                new Preference.OnPreferenceClickListener() {
+                    @Override
+                    public boolean onPreferenceClick(Preference preference) {
+                        IntentUtils.startSiteIntent(getActivity(), preference.getSummary().toString());
+                        return true;
+                    }
+                });
     }
 }
