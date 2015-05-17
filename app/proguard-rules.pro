@@ -92,9 +92,6 @@
     public static final ** CREATOR;
 }
 
-# Retrolambda
--dontwarn java.lang.invoke.*
-
 # RxJava
 -keep class rx.schedulers.Schedulers {
     public static <methods>;
